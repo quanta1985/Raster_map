@@ -3,104 +3,140 @@ import leafmap.foliumap as leafmap
 import tempfile
 import os
 import rasterio
+import rioxarray as rxr
 
 # --- CẤU HÌNH TRANG ---
-st.set_page_config(layout="wide", page_title="Raster Viewer Pro")
+st.set_page_config(layout="wide", page_title="ASCII Raster Viewer")
 
-# --- CSS TÙY CHỈNH (Để giao diện chuyên nghiệp hơn) ---
+# --- CSS TÙY CHỈNH ---
+# Sử dụng st.markdown một lần duy nhất và đảm bảo cú pháp đúng để tránh hiển thị raw text
 st.markdown("""
     <style>
     .main {
         background-color: #f8f9fa;
     }
-    .stTextInput > label {
-        font-weight: bold;
-        color: #2c3e50;
+    div[data-testid="stSidebarUserContent"] {
+        padding-top: 2rem;
+    }
+    .stAlert {
+        font-size: 0.9rem;
     }
     </style>
     """, unsafe_allow_html=True)
 
-# --- SIDEBAR: CẤU HÌNH BẢN ĐỒ ---
+# --- SIDEBAR: CẤU HÌNH ---
 with st.sidebar:
     st.title("🛰️ Cấu hình Bản đồ")
     st.markdown("---")
     
-    # 1. Input Tên bản đồ
-    map_title = st.text_input("Tên bản đồ (Map Title)", value="Bản đồ phân bố không gian")
+    map_title = st.text_input("Tên bản đồ", value="Bản đồ số liệu ASCII")
     
-    # 2. Chọn Basemap (Nền bản đồ)
+    # Chọn Basemap
     basemap_options = {
         "Open Street Map": "OpenStreetMap",
-        "Vệ tinh (Satellite)": "HYBRID", # Google Satellite Hybrid
-        "Sáng (Light Canvas)": "CartoDB.Positron"
+        "Vệ tinh (Satellite)": "HYBRID",
+        "Sáng (Light Canvas)": "CartoDB.Positron",
+        "Địa hình (Terrain)": "Esri.WorldTerrain"
     }
     selected_basemap = st.selectbox("Chọn nền bản đồ", list(basemap_options.keys()))
 
-    # 3. Upload File (Chỉ 1 file duy nhất)
     st.markdown("### Upload dữ liệu")
-    uploaded_file = st.file_uploader("Chọn file Raster (.tif)", type=["tif", "tiff"], accept_multiple_files=False)
+    # Cho phép upload .txt và .asc
+    uploaded_file = st.file_uploader(
+        "Chọn file Raster (.txt, .asc)", 
+        type=["txt", "asc"], 
+        accept_multiple_files=False
+    )
+    
+    # --- CẤU HÌNH QUAN TRỌNG CHO ASCII ---
+    st.markdown("### 🌐 Hệ tọa độ (CRS)")
+    st.caption("File ASCII thường thiếu thông tin CRS. Hãy nhập mã EPSG để định vị đúng.")
+    epsg_code = st.number_input(
+        "Mã EPSG (Ví dụ: 4326 là WGS84, 3405 là VN2000)", 
+        value=4326, 
+        step=1
+    )
 
-    st.info("💡 Tip: File raster cần có hệ tọa độ tham chiếu (CRS) chính xác.")
+    colormap = st.selectbox(
+        "Bảng màu (Colormap)", 
+        ["terrain", "spectral", "coolwarm", "viridis", "plasma", "magma"]
+    )
 
-# --- MAIN AREA: HIỂN THỊ ---
+# --- MAIN AREA ---
 st.header(f"📍 {map_title}")
 
 # Khởi tạo bản đồ
 m = leafmap.Map(
-    minimap_control=True, # Tự động thêm Minimap
-    scale_control=True,   # Tự động thêm Scale bar
+    minimap_control=True,
+    scale_control=True,
     fullscreen_control=True,
     draw_control=False
 )
-
-# Thêm Basemap dựa trên lựa chọn
 m.add_basemap(basemap_options[selected_basemap])
 
-# Xử lý hiển thị Raster
 if uploaded_file is not None:
-    # Streamlit giữ file trong RAM, Leafmap cần đường dẫn file thực tế
-    # -> Ta ghi tạm file ra đĩa
-    with tempfile.NamedTemporaryFile(delete=False, suffix=".tif") as tmp_file:
+    # Lấy extension của file upload (txt hoặc asc)
+    file_ext = uploaded_file.name.split('.')[-1]
+    
+    # Tạo file tạm với đúng đuôi file để rasterio nhận diện driver
+    with tempfile.NamedTemporaryFile(delete=False, suffix=f".{file_ext}") as tmp_file:
         tmp_file.write(uploaded_file.getvalue())
         tmp_file_path = tmp_file.name
 
     try:
-        # Đọc metadata để lấy thông tin bounds (tùy chọn hiển thị)
-        with rasterio.open(tmp_file_path) as src:
-            bounds = src.bounds
+        # Xử lý gán CRS cho file ASCII
+        # Đọc bằng rioxarray để dễ gán CRS
+        rds = rxr.open_rasterio(tmp_file_path)
+        
+        # Nếu file chưa có CRS, gán CRS từ input của user
+        if rds.rio.crs is None:
+            rds.rio.write_crs(f"EPSG:{epsg_code}", inplace=True)
             
-        # Thêm Raster vào bản đồ
-        # Palettes: terrain, viridis, plasma, inferno, magma, cividis
+        # Lưu lại thành GeoTIFF tạm thời để Leafmap hiển thị tốt nhất
+        # (Leafmap xử lý GeoTIFF ổn định hơn ASCII thuần trên web)
+        tif_path = tmp_file_path + ".converted.tif"
+        rds.rio.to_raster(tif_path)
+        
+        # Thêm vào bản đồ
         m.add_raster(
-            tmp_file_path, 
-            layer_name="Dữ liệu Raster", 
-            palette="terrain", 
+            tif_path, 
+            layer_name=uploaded_file.name, 
+            palette=colormap, 
             opacity=0.7,
-            add_legend=True  # Tự động tạo Legend dựa trên min/max value của raster
+            add_legend=True
         )
         
-        # Zoom đến khu vực có raster
-        m.zoom_to_bounds(bounds)
-        
-        st.success("Đã load file thành công!")
+        # Zoom đến phạm vi dữ liệu
+        # Cần mở file TIF vừa convert để lấy bounds chuẩn
+        with rasterio.open(tif_path) as src:
+            bounds = src.bounds
+            m.zoom_to_bounds(bounds)
+
+        st.success(f"Đã load file '{uploaded_file.name}' thành công với EPSG:{epsg_code}")
         
     except Exception as e:
-        st.error(f"Lỗi khi đọc file: {e}")
+        st.error(f"⚠️ Lỗi xử lý file: {e}")
+        st.markdown("""
+        **Gợi ý sửa lỗi:**
+        1. Kiểm tra cấu trúc file TXT/ASCII (phải có header chuẩn: ncols, nrows, xllcorner...).
+        2. Kiểm tra lại mã EPSG (Hệ tọa độ).
+        """)
+        
     finally:
-        # Dọn dẹp file tạm (Best practice)
-        # Lưu ý: Trên Windows đôi khi file đang được dùng sẽ không xóa được ngay, 
-        # nhưng trên Linux/Streamlit Cloud thì ổn.
+        # Dọn dẹp
         try:
             os.remove(tmp_file_path)
+            if os.path.exists(tmp_file_path + ".converted.tif"):
+                os.remove(tmp_file_path + ".converted.tif")
         except:
             pass
 else:
-    # Nếu chưa upload, zoom về Việt Nam cho đẹp
-    m.set_center(105.8, 21.0, 6) # Tọa độ Hà Nội/Việt Nam
+    m.set_center(105.8, 21.0, 6)
 
-# Render bản đồ ra Streamlit
+# Render
 m.to_streamlit(height=700)
 
 # --- FOOTER ---
 st.markdown("---")
-st.markdown("**Tài liệu tham khảo:** Dữ liệu được xử lý và hiển thị tự động.")
+st.markdown("**Tài liệu tham khảo:**")
+st.markdown("- Dữ liệu được trích xuất và hiển thị từ file nguồn người dùng cung cấp.")
