@@ -7,3 +7,5 @@ rioxarray
 localtileserver
 flask
 flask-cors
+xarray
+psutil
