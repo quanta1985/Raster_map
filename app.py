@@ -86,7 +86,7 @@ with st.sidebar:
 
     with st.expander("🛠️ 3. Thông tin Bản đồ", expanded=True):
         map_title_input = st.text_input("Tên bản đồ", value="Bản đồ lan truyền chất ô nhiễm trong môi trường nước")
-        map_subtitle_input = st.text_input("Mô tả (Subtitle)", value="Phân bố nồng độ BOD5 (mg/m3)")
+        map_subtitle_input = st.text_input("Mô tả (Subtitle)", value="Phân bố nồng độ BOD5 (mg/l)")
         
         c3, c4 = st.columns(2)
         show_minimap = c3.checkbox("MiniMap", value=True)
@@ -228,4 +228,4 @@ else:
     st_folium(m, width="100%", height=500)
 
 st.markdown("---")
-st.caption("**Raster Viewer Pro** | Classic Layout Restored")
+st.caption("**Raster Viewer Pro** | copyright@2026: quantrananh.humg@gmail.com")
