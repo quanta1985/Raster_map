@@ -2,7 +2,7 @@ import streamlit as st
 import folium
 from streamlit_folium import st_folium
 from folium.raster_layers import ImageOverlay
-from folium.plugins import MiniMap, Fullscreen, MousePosition, SimpleMapScreenshoter
+from folium.plugins import MiniMap, Fullscreen, MousePosition
 import branca.colormap as cm
 import tempfile
 import os
@@ -12,7 +12,7 @@ import matplotlib.pyplot as plt
 import matplotlib.colors as mcolors
 
 # --- CẤU HÌNH TRANG ---
-st.set_page_config(layout="wide", page_title="Raster Viewer Pro 2.6")
+st.set_page_config(layout="wide", page_title="Raster Viewer Pro 2.7")
 
 # --- 1. HÀM XỬ LÝ SỐ LIỆU ---
 @st.cache_data
@@ -92,10 +92,10 @@ with st.sidebar:
         show_minimap = c3.checkbox("MiniMap", value=True)
         show_fullscreen = c4.checkbox("Fullscreen", value=True)
         show_mouse_pos = st.checkbox("Hiện tọa độ chuột", value=True)
-        # Nút Screenshot đã được tích hợp mặc định vào map
 
 # --- 3. MAIN APP ---
 if uploaded_file:
+    # CSS TÙY CHỈNH
     st.markdown("""
         <style>
         .block-container {
@@ -103,7 +103,7 @@ if uploaded_file:
             padding-bottom: 1rem;
         }
         
-        /* --- LEGEND STYLE --- */
+        /* LEGEND CONTAINER */
         .leaflet-control-legend {
             background-color: rgba(255, 255, 255, 0.7) !important;
             backdrop-filter: blur(5px) !important;
@@ -113,14 +113,12 @@ if uploaded_file:
             border: 1px solid rgba(255,255,255,0.5) !important;
         }
 
-        /* --- KHẮC PHỤC LỖI SỐ 0 KHÁC BIỆT --- */
-        /* Sử dụng font monospace (khoảng cách đều) cho các con số */
+        /* KHẮC PHỤC LỖI SỐ 0 VÀ FONT CHỮ */
         .leaflet-control-legend text {
             font-family: 'Consolas', 'Monaco', 'Courier New', monospace !important; 
             font-size: 11px !important;
             font-weight: 700 !important;
             fill: #111 !important;
-            /* Căn chỉnh số liệu cho thẳng hàng */
             font-variant-numeric: tabular-nums !important;
         }
         
@@ -188,14 +186,7 @@ if uploaded_file:
         )
         m.add_child(colormap)
 
-        # --- NÚT CHỤP ẢNH (SCREENSHOTER) ---
-        SimpleMapScreenshoter(
-            icon="camera", # Có thể đổi thành "download"
-            title="Chụp ảnh bản đồ",
-            hide_on_capture=True # Ẩn các nút điều khiển khi chụp
-        ).add_to(m)
-
-        # Các công cụ khác
+        # Controls
         if show_minimap: MiniMap(toggle_display=True, position='bottomright').add_to(m)
         if show_fullscreen: Fullscreen().add_to(m)
         if show_mouse_pos: MousePosition().add_to(m)
@@ -203,6 +194,15 @@ if uploaded_file:
         m.fit_bounds(bounds)
         folium.LayerControl().add_to(m)
         st_folium(m, width="100%", height=700, returned_objects=[])
+        
+        # Thêm nút Download file HTML để người dùng tự lưu
+        data_html = m.get_root().render()
+        st.download_button(
+            label="💾 Tải bản đồ (HTML)",
+            data=data_html,
+            file_name="raster_map_result.html",
+            mime="text/html"
+        )
 
 else:
     st.info("👈 Vui lòng upload file Raster.")
@@ -210,4 +210,4 @@ else:
     st_folium(m, width="100%", height=500)
 
 st.markdown("---")
-st.caption("**Raster Viewer Pro v2.6** | Screenshot Feature Added")
+st.caption("**Raster Viewer Pro v2.7** | Stable Release")
