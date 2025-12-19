@@ -12,56 +12,57 @@ import matplotlib.pyplot as plt
 import matplotlib.colors as mcolors
 
 # --- CẤU HÌNH TRANG ---
-st.set_page_config(layout="wide", page_title="Raster Viewer Pro 2.2")
+st.set_page_config(layout="wide", page_title="Raster Viewer Pro 2.3")
 
-# --- CSS CAO CẤP (CUSTOM LEGEND) ---
+# =========================================================================
+# 1. CSS XỬ LÝ GIAO DIỆN & LEGEND (ĐÃ SỬA KHOẢNG CÁCH)
+# =========================================================================
+# Lưu ý: Chúng ta sẽ inject biến 'legend_title' vào CSS ở phần Main bên dưới
+# Đây là CSS tĩnh
 st.markdown("""
     <style>
-    /* 1. Fix lỗi title bị che */
+    /* Fix Title bị che */
     .block-container {
         padding-top: 3.5rem !important; 
         padding-bottom: 1rem;
     }
     
-    /* 2. CUSTOM LEGEND CHUYÊN NGHIỆP */
+    /* === CUSTOM LEGEND CONTAINER === */
     .leaflet-control-legend {
-        /* Nền trắng độ trong suốt 50% */
-        background-color: rgba(255, 255, 255, 0.5) !important; 
+        /* Nền trắng mờ (Glassmorphism) */
+        background-color: rgba(255, 255, 255, 0.85) !important; 
+        backdrop-filter: blur(10px) !important;
+        -webkit-backdrop-filter: blur(10px) !important;
         
-        /* Hiệu ứng kính mờ (Làm mờ bản đồ bên dưới khung legend) */
-        backdrop-filter: blur(8px) !important; 
-        -webkit-backdrop-filter: blur(8px) !important;
-        
-        /* Bo góc và đổ bóng nhẹ */
+        /* Border & Shadow */
         border-radius: 12px !important;
-        box-shadow: 0 4px 15px rgba(0,0,0,0.2) !important;
-        border: 1px solid rgba(255,255,255,0.3) !important;
+        border: 1px solid rgba(0,0,0,0.1) !important;
+        box-shadow: 0 4px 20px rgba(0,0,0,0.15) !important;
         
-        /* Tăng khoảng cách bên trong để Legend thoáng hơn */
-        padding: 15px 20px 15px 20px !important;
+        /* Padding: Tạo khoảng thở cho nội dung */
+        padding: 15px 15px 10px 15px !important;
         
-        /* Cố định kích thước tối thiểu để không bị co cụm */
-        min-width: 250px !important;
+        /* Font chữ cho số trên thang màu */
+        font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif !important;
+        font-size: 12px !important;
+        color: #333 !important;
     }
 
-    /* Chỉnh sửa chữ trong Legend */
-    .leaflet-control-legend text {
-        fill: #222 !important;       /* Màu đen đậm */
-        font-family: 'Segoe UI', sans-serif !important;
-        font-weight: 700 !important; /* In đậm */
-        font-size: 13px !important;  /* Chữ to hơn */
-    }
-    
-    /* Chỉnh vạch kẻ chia độ */
+    /* Chỉnh các vạch kẻ (ticks) cho sắc nét */
     .leaflet-control-legend line {
         stroke: #333 !important;
-        stroke-width: 1.5px !important;
-        opacity: 0.8;
+        stroke-width: 1px !important;
+    }
+    
+    /* Ẩn text caption mặc định của SVG (cái bị dính sát) */
+    /* Chúng ta sẽ thay thế bằng CSS ::after xịn hơn */
+    .leaflet-control-legend svg text {
+        font-weight: 600 !important;
     }
     </style>
     """, unsafe_allow_html=True)
 
-# --- 1. LOAD DATA ---
+# --- 2. HÀM XỬ LÝ (GIỮ NGUYÊN) ---
 @st.cache_data
 def load_and_reproject(file_path, target_epsg):
     try:
@@ -81,7 +82,6 @@ def load_and_reproject(file_path, target_epsg):
     except Exception as e:
         return None, None, str(e)
 
-# --- 2. COLORIZE ---
 def colorize_raster(data, colormap_name, opacity, custom_min=None, custom_max=None):
     valid_mask = ~np.isnan(data)
     if not np.any(valid_mask):
@@ -106,7 +106,7 @@ def get_hex_colors(cmap_name, n_steps=20):
     cmap = plt.get_cmap(cmap_name)
     return [mcolors.to_hex(cmap(i)) for i in np.linspace(0, 1, n_steps)]
 
-# --- SIDEBAR ---
+# --- 3. SIDEBAR ---
 with st.sidebar:
     st.header("🎛️ Control Panel")
     with st.expander("📁 1. Dữ liệu Input", expanded=True):
@@ -133,13 +133,29 @@ with st.sidebar:
 
     with st.expander("🛠️ 3. Công cụ Bản đồ", expanded=False):
         map_title_input = st.text_input("Tên bản đồ", value="Kết quả Phân tích")
-        # Thêm khoảng trắng vào title legend để tạo khoảng cách
         legend_title = st.text_input("Tên chú giải", value="Nồng độ (mg/m³)")
         show_minimap = st.checkbox("Hiện MiniMap", value=True)
         show_fullscreen = st.checkbox("Fullscreen", value=True)
 
-# --- MAIN ---
+# --- 4. MAIN APP ---
 if uploaded_file:
+    # --- INJECT CSS ĐỘNG ĐỂ TẠO LABEL LEGEND MỚI ---
+    # Đây là "Phép thuật": Chúng ta dùng CSS ::after để tạo chữ thay vì dùng caption có sẵn
+    st.markdown(f"""
+        <style>
+        .leaflet-control-legend::after {{
+            content: "{legend_title}"; /* Lấy nội dung từ biến Python */
+            display: block;
+            margin-top: 15px; /* <--- CHỈNH KHOẢNG CÁCH Ở ĐÂY */
+            text-align: center;
+            font-weight: 700;
+            font-size: 14px;
+            color: #000; /* Màu đen đậm */
+            letter-spacing: 0.5px;
+        }}
+        </style>
+    """, unsafe_allow_html=True)
+
     with tempfile.NamedTemporaryFile(delete=False, suffix=f".{uploaded_file.name.split('.')[-1]}") as tmp:
         tmp.write(uploaded_file.getvalue())
         tmp_path = tmp.name
@@ -176,25 +192,22 @@ if uploaded_file:
             name="Raster Layer"
         ).add_to(m)
 
-        # --- LEGEND TỐI ƯU HÓA ---
+        # --- TẠO LEGEND ---
         hex_colors = get_hex_colors(cmap_name)
         
-        # Thủ thuật: Thêm \n vào trước Title để đẩy nó ra xa thanh màu
-        # Hoặc dùng HTML Space
-        formatted_caption = f"{legend_title}"
-        
+        # MẸO: Đặt caption='' (rỗng) để ẩn chữ xấu đi
+        # Chữ đẹp sẽ được hiện bằng CSS ::after ở trên
         colormap = cm.LinearColormap(
             colors=hex_colors,
             vmin=stats['used_min'],
             vmax=stats['used_max'],
-            caption=formatted_caption
+            caption='' 
         )
-        
-        # Add legend vào map
         m.add_child(colormap)
 
         if show_minimap: MiniMap(toggle_display=True, position='bottomright').add_to(m)
         if show_fullscreen: Fullscreen().add_to(m)
+        MousePosition().add_to(m)
 
         m.fit_bounds(bounds)
         folium.LayerControl().add_to(m)
@@ -206,4 +219,4 @@ else:
     st_folium(m, width="100%", height=500)
 
 st.markdown("---")
-st.caption("**Raster Viewer Pro v2.2** | Enhanced Legend UI")
+st.caption("**Raster Viewer Pro v2.3** | Perfect Legend UI")
