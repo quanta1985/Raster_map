@@ -2,7 +2,7 @@ import streamlit as st
 import folium
 from streamlit_folium import st_folium
 from folium.raster_layers import ImageOverlay
-from folium.plugins import MiniMap, Fullscreen, MousePosition
+from folium.plugins import MiniMap, Fullscreen, MousePosition, SimpleMapScreenshoter
 import branca.colormap as cm
 import tempfile
 import os
@@ -12,9 +12,9 @@ import matplotlib.pyplot as plt
 import matplotlib.colors as mcolors
 
 # --- CẤU HÌNH TRANG ---
-st.set_page_config(layout="wide", page_title="Raster Viewer Pro 2.5")
+st.set_page_config(layout="wide", page_title="Raster Viewer Pro 2.6")
 
-# --- 1. HÀM XỬ LÝ (GIỮ NGUYÊN) ---
+# --- 1. HÀM XỬ LÝ SỐ LIỆU ---
 @st.cache_data
 def load_and_reproject(file_path, target_epsg):
     try:
@@ -62,7 +62,6 @@ def get_hex_colors(cmap_name, n_steps=20):
 with st.sidebar:
     st.header("🎛️ Control Panel")
     
-    # 1. Input
     with st.expander("📁 1. Dữ liệu Input", expanded=True):
         uploaded_file = st.file_uploader("Chọn file Raster", type=["asc", "tif", "txt"])
         crs_mode = st.selectbox("Hệ tọa độ", ["UTM (Mét)", "WGS84", "Custom EPSG"])
@@ -75,7 +74,6 @@ with st.sidebar:
         elif crs_mode == "Custom EPSG":
             input_epsg = st.number_input("Mã EPSG", value=3405)
 
-    # 2. Visuals
     with st.expander("🎨 2. Hiển thị & Legend", expanded=True):
         cmap_name = st.selectbox("Bảng màu", ["turbo", "jet", "viridis", "plasma", "Spectral", "RdYlGn"], index=0)
         opacity = st.slider("Độ trong suốt", 0.0, 1.0, 0.7)
@@ -86,20 +84,18 @@ with st.sidebar:
             c_min = col_min.number_input("Min", value=0.0)
             c_max = col_max.number_input("Max", value=100.0)
 
-    # 3. Tools (Đã thay Title Legend thành Subtitle)
     with st.expander("🛠️ 3. Thông tin Bản đồ", expanded=True):
         map_title_input = st.text_input("Tên bản đồ", value="Kết quả Phân tích")
-        # THAY ĐỔI: Nhập Subtitle thay vì Legend Title
         map_subtitle_input = st.text_input("Mô tả (Subtitle)", value="Phân bố nồng độ bụi PM2.5 trung bình 24h")
         
         c3, c4 = st.columns(2)
         show_minimap = c3.checkbox("MiniMap", value=True)
         show_fullscreen = c4.checkbox("Fullscreen", value=True)
         show_mouse_pos = st.checkbox("Hiện tọa độ chuột", value=True)
+        # Nút Screenshot đã được tích hợp mặc định vào map
 
 # --- 3. MAIN APP ---
 if uploaded_file:
-    # --- CSS: GIỮ GIAO DIỆN ĐẸP ---
     st.markdown("""
         <style>
         .block-container {
@@ -107,24 +103,27 @@ if uploaded_file:
             padding-bottom: 1rem;
         }
         
-        /* LEGEND CONTAINER ĐẸP (Glassmorphism) */
+        /* --- LEGEND STYLE --- */
         .leaflet-control-legend {
-            background-color: rgba(255, 255, 255, 0.7) !important; /* Trắng đục 70% */
+            background-color: rgba(255, 255, 255, 0.7) !important;
             backdrop-filter: blur(5px) !important;
             border-radius: 8px !important;
             box-shadow: 0 2px 10px rgba(0,0,0,0.15) !important;
-            padding: 10px !important;
+            padding: 10px 15px !important;
             border: 1px solid rgba(255,255,255,0.5) !important;
         }
 
-        /* Số liệu trên thang màu rõ nét */
+        /* --- KHẮC PHỤC LỖI SỐ 0 KHÁC BIỆT --- */
+        /* Sử dụng font monospace (khoảng cách đều) cho các con số */
         .leaflet-control-legend text {
+            font-family: 'Consolas', 'Monaco', 'Courier New', monospace !important; 
             font-size: 11px !important;
             font-weight: 700 !important;
             fill: #111 !important;
+            /* Căn chỉnh số liệu cho thẳng hàng */
+            font-variant-numeric: tabular-nums !important;
         }
         
-        /* Vạch kẻ */
         .leaflet-control-legend line {
             stroke: #333 !important;
             stroke-width: 1.2px !important;
@@ -145,22 +144,20 @@ if uploaded_file:
     else:
         img, stats = colorize_raster(raw_data, cmap_name, opacity, c_min, c_max)
 
-        # --- HEADER VỚI SUBTITLE MỚI ---
+        # Header
         st.subheader(f"📍 {map_title_input}")
         if map_subtitle_input:
-            st.markdown(f"**{map_subtitle_input}**") # Hiển thị Subtitle đậm
+            st.markdown(f"**{map_subtitle_input}**")
         
-        # Thống kê
+        # Stats
         col1, col2, col3, col4 = st.columns(4)
         col1.metric("Min", f"{stats['min']:.2f}")
         col2.metric("Max", f"{stats['max']:.2f}")
         col3.metric("Mean", f"{stats['mean']:.2f}")
-        col4.caption(f"Dải màu hiển thị: {stats['used_min']:.1f} - {stats['used_max']:.1f}")
+        col4.caption(f"Dải màu: {stats['used_min']:.1f} - {stats['used_max']:.1f}")
 
-        # Map setup
+        # Map Setup
         center = [(bounds[0][0] + bounds[1][0])/2, (bounds[0][1] + bounds[1][1])/2]
-        
-        # THAY ĐỔI: tiles='CartoDB positron' để mặc định là Nền Sáng (Light Map)
         m = folium.Map(
             location=center, 
             zoom_start=11, 
@@ -168,7 +165,6 @@ if uploaded_file:
             control_scale=True
         )
         
-        # Các lớp nền tùy chọn thêm
         folium.TileLayer('OpenStreetMap', name="Bản đồ đường phố").add_to(m)
         folium.TileLayer(
             tiles='https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
@@ -182,17 +178,24 @@ if uploaded_file:
             name="Lớp dữ liệu"
         ).add_to(m)
 
-        # Legend (Không title, chỉ có thang màu)
+        # Legend
         hex_colors = get_hex_colors(cmap_name)
         colormap = cm.LinearColormap(
             colors=hex_colors,
             vmin=stats['used_min'],
             vmax=stats['used_max'],
-            caption='' # Để trống để legend gọn gàng
+            caption=''
         )
         m.add_child(colormap)
 
-        # Controls
+        # --- NÚT CHỤP ẢNH (SCREENSHOTER) ---
+        SimpleMapScreenshoter(
+            icon="camera", # Có thể đổi thành "download"
+            title="Chụp ảnh bản đồ",
+            hide_on_capture=True # Ẩn các nút điều khiển khi chụp
+        ).add_to(m)
+
+        # Các công cụ khác
         if show_minimap: MiniMap(toggle_display=True, position='bottomright').add_to(m)
         if show_fullscreen: Fullscreen().add_to(m)
         if show_mouse_pos: MousePosition().add_to(m)
@@ -203,9 +206,8 @@ if uploaded_file:
 
 else:
     st.info("👈 Vui lòng upload file Raster.")
-    # Map demo cũng để nền sáng
     m = folium.Map(location=[16.0, 106.0], zoom_start=5, tiles="CartoDB positron")
     st_folium(m, width="100%", height=500)
 
 st.markdown("---")
-st.caption("**Raster Viewer Pro v2.5** | Light Theme Default")
+st.caption("**Raster Viewer Pro v2.6** | Screenshot Feature Added")
