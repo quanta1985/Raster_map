@@ -183,3 +183,29 @@ if uploaded_file:
         hex_colors = get_hex_colors(cmap_name)
         colormap = cm.LinearColormap(
             colors=hex_colors,
+            vmin=stats['used_min'],
+            vmax=stats['used_max'],
+            caption=legend_title
+        )
+        m.add_child(colormap)
+
+        if show_minimap:
+            MiniMap(toggle_display=True, position='bottomright').add_to(m)
+        if show_fullscreen:
+            Fullscreen().add_to(m)
+        if show_mouse_pos:
+            MousePosition().add_to(m)
+
+        m.fit_bounds(bounds)
+        folium.LayerControl().add_to(m)
+
+        st_folium(m, width="100%", height=700, returned_objects=[])
+
+else:
+    st.info("👈 Vui lòng upload file Raster từ thanh bên trái.")
+    m = folium.Map(location=[16.0, 106.0], zoom_start=5)
+    st_folium(m, width="100%", height=500)
+
+# --- FOOTER ---
+st.markdown("---")
+st.markdown("**Raster Viewer Pro v2.1**")
