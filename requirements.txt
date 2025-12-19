@@ -10,3 +10,6 @@ flask-cors
 xarray
 psutil
 numpy
+streamlit-folium
+matplotlib
+numpy
