@@ -4,3 +4,6 @@ rasterio
 folium
 geopandas
 rioxarray
+localtileserver
+flask
+flask-cors
