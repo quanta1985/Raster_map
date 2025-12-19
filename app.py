@@ -96,7 +96,7 @@ with st.sidebar:
 # --- 3. MAIN APP ---
 if uploaded_file:
     # CSS TÙY CHỈNH
-st.markdown("""
+    st.markdown("""
         <style>
         .block-container {
             padding-top: 3rem !important;
