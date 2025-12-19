@@ -12,7 +12,7 @@ import matplotlib.pyplot as plt
 import matplotlib.colors as mcolors
 
 # --- CẤU HÌNH TRANG ---
-st.set_page_config(layout="wide", page_title="Raster Viewer Pro 2.8")
+st.set_page_config(layout="wide", page_title="Raster Viewer Pro 2.9")
 
 # --- 1. HÀM XỬ LÝ SỐ LIỆU ---
 @st.cache_data
@@ -99,26 +99,38 @@ if uploaded_file:
     st.markdown("""
         <style>
         .block-container {
-            padding-top: 3rem !important; /* Giảm padding một chút cho gọn */
+            padding-top: 3rem !important;
             padding-bottom: 1rem;
         }
         
-        /* LEGEND CONTAINER */
-        .leaflet-control-legend {
-            background-color: rgba(255, 255, 255, 0.7) !important;
-            backdrop-filter: blur(5px) !important;
-            border-radius: 8px !important;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.15) !important;
-            padding: 10px 15px !important;
-            border: 1px solid rgba(255,255,255,0.5) !important;
+        /* --- 1. CHỈNH SIZE CHỮ MIN/MAX/MEAN --- */
+        /* Label (Chữ Min, Max...) */
+        div[data-testid="stMetricLabel"] {
+            font-size: 14px !important;
+            font-weight: 500 !important;
+        }
+        /* Value (Số liệu) - Giảm xuống 18px cho hài hòa */
+        div[data-testid="stMetricValue"] {
+            font-size: 18px !important; 
+            font-weight: 600 !important;
+            color: #0068c9 !important;
         }
 
-        /* FONT MONOSPACE CHO SỐ */
+        /* --- 2. LEGEND BACKGROUND TRẮNG --- */
+        .leaflet-control-legend {
+            background-color: #ffffff !important; /* TRẮNG TUYỆT ĐỐI */
+            border-radius: 8px !important;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2) !important;
+            padding: 10px 15px !important;
+            border: 1px solid rgba(0,0,0,0.1) !important;
+        }
+
+        /* Font số liệu Monospace */
         .leaflet-control-legend text {
             font-family: 'Consolas', 'Monaco', 'Courier New', monospace !important; 
             font-size: 11px !important;
             font-weight: 700 !important;
-            fill: #111 !important;
+            fill: #000 !important;
             font-variant-numeric: tabular-nums !important;
         }
         
@@ -194,14 +206,12 @@ if uploaded_file:
         m.fit_bounds(bounds)
         folium.LayerControl().add_to(m)
         
-        # THAY ĐỔI: Giảm chiều cao xuống 550px để vừa màn hình
         st_folium(m, width="100%", height=550, returned_objects=[])
 
 else:
     st.info("👈 Vui lòng upload file Raster.")
-    # Map demo cũng giảm chiều cao
     m = folium.Map(location=[16.0, 106.0], zoom_start=5, tiles="CartoDB positron")
     st_folium(m, width="100%", height=500)
 
 st.markdown("---")
-st.caption("**Raster Viewer Pro v2.8** | Optimized Layout")
+st.caption("**Raster Viewer Pro v2.9** | Font Tweaks & Pure White Legend")
