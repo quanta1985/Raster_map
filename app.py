@@ -12,57 +12,9 @@ import matplotlib.pyplot as plt
 import matplotlib.colors as mcolors
 
 # --- CẤU HÌNH TRANG ---
-st.set_page_config(layout="wide", page_title="Raster Viewer Pro 2.3")
+st.set_page_config(layout="wide", page_title="Raster Viewer Pro 2.4")
 
-# =========================================================================
-# 1. CSS XỬ LÝ GIAO DIỆN & LEGEND (ĐÃ SỬA KHOẢNG CÁCH)
-# =========================================================================
-# Lưu ý: Chúng ta sẽ inject biến 'legend_title' vào CSS ở phần Main bên dưới
-# Đây là CSS tĩnh
-st.markdown("""
-    <style>
-    /* Fix Title bị che */
-    .block-container {
-        padding-top: 3.5rem !important; 
-        padding-bottom: 1rem;
-    }
-    
-    /* === CUSTOM LEGEND CONTAINER === */
-    .leaflet-control-legend {
-        /* Nền trắng mờ (Glassmorphism) */
-        background-color: rgba(255, 255, 255, 0.85) !important; 
-        backdrop-filter: blur(10px) !important;
-        -webkit-backdrop-filter: blur(10px) !important;
-        
-        /* Border & Shadow */
-        border-radius: 12px !important;
-        border: 1px solid rgba(0,0,0,0.1) !important;
-        box-shadow: 0 4px 20px rgba(0,0,0,0.15) !important;
-        
-        /* Padding: Tạo khoảng thở cho nội dung */
-        padding: 15px 15px 10px 15px !important;
-        
-        /* Font chữ cho số trên thang màu */
-        font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif !important;
-        font-size: 12px !important;
-        color: #333 !important;
-    }
-
-    /* Chỉnh các vạch kẻ (ticks) cho sắc nét */
-    .leaflet-control-legend line {
-        stroke: #333 !important;
-        stroke-width: 1px !important;
-    }
-    
-    /* Ẩn text caption mặc định của SVG (cái bị dính sát) */
-    /* Chúng ta sẽ thay thế bằng CSS ::after xịn hơn */
-    .leaflet-control-legend svg text {
-        font-weight: 600 !important;
-    }
-    </style>
-    """, unsafe_allow_html=True)
-
-# --- 2. HÀM XỬ LÝ (GIỮ NGUYÊN) ---
+# --- 1. HÀM XỬ LÝ (GIỮ NGUYÊN) ---
 @st.cache_data
 def load_and_reproject(file_path, target_epsg):
     try:
@@ -106,9 +58,11 @@ def get_hex_colors(cmap_name, n_steps=20):
     cmap = plt.get_cmap(cmap_name)
     return [mcolors.to_hex(cmap(i)) for i in np.linspace(0, 1, n_steps)]
 
-# --- 3. SIDEBAR ---
+# --- 2. SIDEBAR ---
 with st.sidebar:
     st.header("🎛️ Control Panel")
+    
+    # 1. Input
     with st.expander("📁 1. Dữ liệu Input", expanded=True):
         uploaded_file = st.file_uploader("Chọn file Raster", type=["asc", "tif", "txt"])
         crs_mode = st.selectbox("Hệ tọa độ", ["UTM (Mét)", "WGS84", "Custom EPSG"])
@@ -121,6 +75,7 @@ with st.sidebar:
         elif crs_mode == "Custom EPSG":
             input_epsg = st.number_input("Mã EPSG", value=3405)
 
+    # 2. Visuals
     with st.expander("🎨 2. Hiển thị & Legend", expanded=True):
         cmap_name = st.selectbox("Bảng màu", ["turbo", "jet", "viridis", "plasma", "Spectral", "RdYlGn"], index=0)
         opacity = st.slider("Độ trong suốt", 0.0, 1.0, 0.7)
@@ -131,27 +86,56 @@ with st.sidebar:
             c_min = col_min.number_input("Min", value=0.0)
             c_max = col_max.number_input("Max", value=100.0)
 
-    with st.expander("🛠️ 3. Công cụ Bản đồ", expanded=False):
+    # 3. Tools (Đã thêm lại Checkbox Mouse Position)
+    with st.expander("🛠️ 3. Công cụ Bản đồ", expanded=True):
         map_title_input = st.text_input("Tên bản đồ", value="Kết quả Phân tích")
         legend_title = st.text_input("Tên chú giải", value="Nồng độ (mg/m³)")
-        show_minimap = st.checkbox("Hiện MiniMap", value=True)
-        show_fullscreen = st.checkbox("Fullscreen", value=True)
+        
+        c3, c4 = st.columns(2)
+        show_minimap = c3.checkbox("MiniMap", value=True)
+        show_fullscreen = c4.checkbox("Fullscreen", value=True)
+        show_mouse_pos = st.checkbox("Hiện tọa độ chuột (Cursor)", value=True)
 
-# --- 4. MAIN APP ---
+# --- 3. MAIN APP ---
 if uploaded_file:
-    # --- INJECT CSS ĐỘNG ĐỂ TẠO LABEL LEGEND MỚI ---
-    # Đây là "Phép thuật": Chúng ta dùng CSS ::after để tạo chữ thay vì dùng caption có sẵn
+    # --- CSS FIX TITLE (QUAN TRỌNG) ---
+    # Sử dụng {{ và }} để tránh lỗi conflict với f-string của Python
     st.markdown(f"""
         <style>
+        .block-container {{
+            padding-top: 3.5rem !important; 
+            padding-bottom: 1rem;
+        }}
+        
+        /* LEGEND CONTAINER */
+        .leaflet-control-legend {{
+            background-color: rgba(255, 255, 255, 0.6) !important; /* Trong suốt 40% */
+            backdrop-filter: blur(8px) !important;
+            -webkit-backdrop-filter: blur(8px) !important;
+            border-radius: 10px !important;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1) !important;
+            padding: 10px 15px 10px 15px !important;
+            border: 1px solid rgba(255,255,255,0.4) !important;
+        }}
+
+        /* TẠO TITLE MỚI CHO LEGEND */
         .leaflet-control-legend::after {{
-            content: "{legend_title}"; /* Lấy nội dung từ biến Python */
+            content: "{legend_title}"; /* Nội dung từ biến Python */
             display: block;
-            margin-top: 15px; /* <--- CHỈNH KHOẢNG CÁCH Ở ĐÂY */
+            margin-top: 12px; /* Khoảng cách với thanh màu */
             text-align: center;
-            font-weight: 700;
+            font-weight: 800;
             font-size: 14px;
-            color: #000; /* Màu đen đậm */
-            letter-spacing: 0.5px;
+            color: #000;
+            font-family: sans-serif;
+            text-shadow: 0px 0px 2px rgba(255,255,255,0.8);
+        }}
+
+        /* Style số liệu trên thang màu */
+        .leaflet-control-legend text {{
+            font-size: 11px !important;
+            font-weight: 700 !important;
+            fill: #111 !important;
         }}
         </style>
     """, unsafe_allow_html=True)
@@ -170,12 +154,15 @@ if uploaded_file:
         img, stats = colorize_raster(raw_data, cmap_name, opacity, c_min, c_max)
 
         st.subheader(f"📍 {map_title_input}")
-        m1, m2, m3, m4 = st.columns(4)
-        m1.metric("Min", f"{stats['min']:.2f}")
-        m2.metric("Max", f"{stats['max']:.2f}")
-        m3.metric("Mean", f"{stats['mean']:.2f}")
-        m4.caption(f"Range: {stats['used_min']:.1f} - {stats['used_max']:.1f}")
+        
+        # Thống kê
+        col1, col2, col3, col4 = st.columns(4)
+        col1.metric("Min", f"{stats['min']:.2f}")
+        col2.metric("Max", f"{stats['max']:.2f}")
+        col3.metric("Mean", f"{stats['mean']:.2f}")
+        col4.caption(f"Used Range: {stats['used_min']:.1f} - {stats['used_max']:.1f}")
 
+        # Map setup
         center = [(bounds[0][0] + bounds[1][0])/2, (bounds[0][1] + bounds[1][1])/2]
         m = folium.Map(location=center, zoom_start=11, tiles="OpenStreetMap", control_scale=True)
         
@@ -189,25 +176,23 @@ if uploaded_file:
             image=img,
             bounds=bounds,
             opacity=opacity,
-            name="Raster Layer"
+            name="Raster Data"
         ).add_to(m)
 
-        # --- TẠO LEGEND ---
+        # Legend
         hex_colors = get_hex_colors(cmap_name)
-        
-        # MẸO: Đặt caption='' (rỗng) để ẩn chữ xấu đi
-        # Chữ đẹp sẽ được hiện bằng CSS ::after ở trên
         colormap = cm.LinearColormap(
             colors=hex_colors,
             vmin=stats['used_min'],
             vmax=stats['used_max'],
-            caption='' 
+            caption='' # Ẩn caption mặc định để dùng CSS ::after
         )
         m.add_child(colormap)
 
+        # Add Controls
         if show_minimap: MiniMap(toggle_display=True, position='bottomright').add_to(m)
         if show_fullscreen: Fullscreen().add_to(m)
-        MousePosition().add_to(m)
+        if show_mouse_pos: MousePosition().add_to(m) # Đã thêm lại
 
         m.fit_bounds(bounds)
         folium.LayerControl().add_to(m)
@@ -219,4 +204,4 @@ else:
     st_folium(m, width="100%", height=500)
 
 st.markdown("---")
-st.caption("**Raster Viewer Pro v2.3** | Perfect Legend UI")
+st.caption("**Raster Viewer Pro v2.4** | Fix: Legend Title & Tools")
