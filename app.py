@@ -12,7 +12,7 @@ import matplotlib.pyplot as plt
 import matplotlib.colors as mcolors
 
 # --- CẤU HÌNH TRANG ---
-st.set_page_config(layout="wide", page_title="Raster Viewer Pro 2.4")
+st.set_page_config(layout="wide", page_title="Raster Viewer Pro 2.5")
 
 # --- 1. HÀM XỬ LÝ (GIỮ NGUYÊN) ---
 @st.cache_data
@@ -86,57 +86,49 @@ with st.sidebar:
             c_min = col_min.number_input("Min", value=0.0)
             c_max = col_max.number_input("Max", value=100.0)
 
-    # 3. Tools (Đã thêm lại Checkbox Mouse Position)
-    with st.expander("🛠️ 3. Công cụ Bản đồ", expanded=True):
+    # 3. Tools (Đã thay Title Legend thành Subtitle)
+    with st.expander("🛠️ 3. Thông tin Bản đồ", expanded=True):
         map_title_input = st.text_input("Tên bản đồ", value="Kết quả Phân tích")
-        legend_title = st.text_input("Tên chú giải", value="Nồng độ (mg/m³)")
+        # THAY ĐỔI: Nhập Subtitle thay vì Legend Title
+        map_subtitle_input = st.text_input("Mô tả (Subtitle)", value="Phân bố nồng độ bụi PM2.5 trung bình 24h")
         
         c3, c4 = st.columns(2)
         show_minimap = c3.checkbox("MiniMap", value=True)
         show_fullscreen = c4.checkbox("Fullscreen", value=True)
-        show_mouse_pos = st.checkbox("Hiện tọa độ chuột (Cursor)", value=True)
+        show_mouse_pos = st.checkbox("Hiện tọa độ chuột", value=True)
 
 # --- 3. MAIN APP ---
 if uploaded_file:
-    # --- CSS FIX TITLE (QUAN TRỌNG) ---
-    # Sử dụng {{ và }} để tránh lỗi conflict với f-string của Python
-    st.markdown(f"""
+    # --- CSS: GIỮ GIAO DIỆN ĐẸP ---
+    st.markdown("""
         <style>
-        .block-container {{
+        .block-container {
             padding-top: 3.5rem !important; 
             padding-bottom: 1rem;
-        }}
+        }
         
-        /* LEGEND CONTAINER */
-        .leaflet-control-legend {{
-            background-color: rgba(255, 255, 255, 0.6) !important; /* Trong suốt 40% */
-            backdrop-filter: blur(8px) !important;
-            -webkit-backdrop-filter: blur(8px) !important;
-            border-radius: 10px !important;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.1) !important;
-            padding: 10px 15px 10px 15px !important;
-            border: 1px solid rgba(255,255,255,0.4) !important;
-        }}
+        /* LEGEND CONTAINER ĐẸP (Glassmorphism) */
+        .leaflet-control-legend {
+            background-color: rgba(255, 255, 255, 0.7) !important; /* Trắng đục 70% */
+            backdrop-filter: blur(5px) !important;
+            border-radius: 8px !important;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.15) !important;
+            padding: 10px !important;
+            border: 1px solid rgba(255,255,255,0.5) !important;
+        }
 
-        /* TẠO TITLE MỚI CHO LEGEND */
-        .leaflet-control-legend::after {{
-            content: "{legend_title}"; /* Nội dung từ biến Python */
-            display: block;
-            margin-top: 12px; /* Khoảng cách với thanh màu */
-            text-align: center;
-            font-weight: 800;
-            font-size: 14px;
-            color: #000;
-            font-family: sans-serif;
-            text-shadow: 0px 0px 2px rgba(255,255,255,0.8);
-        }}
-
-        /* Style số liệu trên thang màu */
-        .leaflet-control-legend text {{
+        /* Số liệu trên thang màu rõ nét */
+        .leaflet-control-legend text {
             font-size: 11px !important;
             font-weight: 700 !important;
             fill: #111 !important;
-        }}
+        }
+        
+        /* Vạch kẻ */
+        .leaflet-control-legend line {
+            stroke: #333 !important;
+            stroke-width: 1.2px !important;
+        }
         </style>
     """, unsafe_allow_html=True)
 
@@ -153,20 +145,31 @@ if uploaded_file:
     else:
         img, stats = colorize_raster(raw_data, cmap_name, opacity, c_min, c_max)
 
+        # --- HEADER VỚI SUBTITLE MỚI ---
         st.subheader(f"📍 {map_title_input}")
+        if map_subtitle_input:
+            st.markdown(f"**{map_subtitle_input}**") # Hiển thị Subtitle đậm
         
         # Thống kê
         col1, col2, col3, col4 = st.columns(4)
         col1.metric("Min", f"{stats['min']:.2f}")
         col2.metric("Max", f"{stats['max']:.2f}")
         col3.metric("Mean", f"{stats['mean']:.2f}")
-        col4.caption(f"Used Range: {stats['used_min']:.1f} - {stats['used_max']:.1f}")
+        col4.caption(f"Dải màu hiển thị: {stats['used_min']:.1f} - {stats['used_max']:.1f}")
 
         # Map setup
         center = [(bounds[0][0] + bounds[1][0])/2, (bounds[0][1] + bounds[1][1])/2]
-        m = folium.Map(location=center, zoom_start=11, tiles="OpenStreetMap", control_scale=True)
         
-        folium.TileLayer('CartoDB positron', name="Nền Sáng").add_to(m)
+        # THAY ĐỔI: tiles='CartoDB positron' để mặc định là Nền Sáng (Light Map)
+        m = folium.Map(
+            location=center, 
+            zoom_start=11, 
+            tiles="CartoDB positron", 
+            control_scale=True
+        )
+        
+        # Các lớp nền tùy chọn thêm
+        folium.TileLayer('OpenStreetMap', name="Bản đồ đường phố").add_to(m)
         folium.TileLayer(
             tiles='https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
             attr='Esri', name='Vệ tinh'
@@ -176,23 +179,23 @@ if uploaded_file:
             image=img,
             bounds=bounds,
             opacity=opacity,
-            name="Raster Data"
+            name="Lớp dữ liệu"
         ).add_to(m)
 
-        # Legend
+        # Legend (Không title, chỉ có thang màu)
         hex_colors = get_hex_colors(cmap_name)
         colormap = cm.LinearColormap(
             colors=hex_colors,
             vmin=stats['used_min'],
             vmax=stats['used_max'],
-            caption='' # Ẩn caption mặc định để dùng CSS ::after
+            caption='' # Để trống để legend gọn gàng
         )
         m.add_child(colormap)
 
-        # Add Controls
+        # Controls
         if show_minimap: MiniMap(toggle_display=True, position='bottomright').add_to(m)
         if show_fullscreen: Fullscreen().add_to(m)
-        if show_mouse_pos: MousePosition().add_to(m) # Đã thêm lại
+        if show_mouse_pos: MousePosition().add_to(m)
 
         m.fit_bounds(bounds)
         folium.LayerControl().add_to(m)
@@ -200,8 +203,9 @@ if uploaded_file:
 
 else:
     st.info("👈 Vui lòng upload file Raster.")
-    m = folium.Map(location=[16.0, 106.0], zoom_start=5)
+    # Map demo cũng để nền sáng
+    m = folium.Map(location=[16.0, 106.0], zoom_start=5, tiles="CartoDB positron")
     st_folium(m, width="100%", height=500)
 
 st.markdown("---")
-st.caption("**Raster Viewer Pro v2.4** | Fix: Legend Title & Tools")
+st.caption("**Raster Viewer Pro v2.5** | Light Theme Default")
