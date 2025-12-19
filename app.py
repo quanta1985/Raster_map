@@ -214,4 +214,4 @@ else:
     st_folium(m, width="100%", height=500)
 
 st.markdown("---")
-st.caption("**Raster Viewer Pro v2.9** | quantrananh.humg@gmail.com")
+st.caption("**Raster Viewer Pro v2.9** | Font Tweaks & Pure White Legend")
