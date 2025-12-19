@@ -119,9 +119,9 @@ if uploaded_file:
         /* --- 2. LEGEND BACKGROUND TRẮNG --- */
         .leaflet-control-legend {
             background-color: #ffffff !important; /* TRẮNG TUYỆT ĐỐI */
-            border-radius: 8px !important;
+            border-radius: 20px !important;
             box-shadow: 0 4px 12px rgba(0,0,0,0.2) !important;
-            padding: 10px 15px !important;
+            padding: 20px 15px !important;
             border: 1px solid rgba(0,0,0,0.1) !important;
         }
 
