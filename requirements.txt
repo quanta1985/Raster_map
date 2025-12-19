@@ -3,3 +3,4 @@ leafmap
 rasterio
 folium
 geopandas
+rioxarray
