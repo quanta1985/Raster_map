@@ -12,7 +12,7 @@ import matplotlib.pyplot as plt
 import matplotlib.colors as mcolors
 
 # --- CẤU HÌNH TRANG ---
-st.set_page_config(layout="wide", page_title="Raster Viewer Pro 2.7")
+st.set_page_config(layout="wide", page_title="Raster Viewer Pro 2.8")
 
 # --- 1. HÀM XỬ LÝ SỐ LIỆU ---
 @st.cache_data
@@ -99,7 +99,7 @@ if uploaded_file:
     st.markdown("""
         <style>
         .block-container {
-            padding-top: 3.5rem !important; 
+            padding-top: 3rem !important; /* Giảm padding một chút cho gọn */
             padding-bottom: 1rem;
         }
         
@@ -113,7 +113,7 @@ if uploaded_file:
             border: 1px solid rgba(255,255,255,0.5) !important;
         }
 
-        /* KHẮC PHỤC LỖI SỐ 0 VÀ FONT CHỮ */
+        /* FONT MONOSPACE CHO SỐ */
         .leaflet-control-legend text {
             font-family: 'Consolas', 'Monaco', 'Courier New', monospace !important; 
             font-size: 11px !important;
@@ -193,21 +193,15 @@ if uploaded_file:
 
         m.fit_bounds(bounds)
         folium.LayerControl().add_to(m)
-        st_folium(m, width="100%", height=700, returned_objects=[])
         
-        # Thêm nút Download file HTML để người dùng tự lưu
-        data_html = m.get_root().render()
-        st.download_button(
-            label="💾 Tải bản đồ (HTML)",
-            data=data_html,
-            file_name="raster_map_result.html",
-            mime="text/html"
-        )
+        # THAY ĐỔI: Giảm chiều cao xuống 550px để vừa màn hình
+        st_folium(m, width="100%", height=550, returned_objects=[])
 
 else:
     st.info("👈 Vui lòng upload file Raster.")
+    # Map demo cũng giảm chiều cao
     m = folium.Map(location=[16.0, 106.0], zoom_start=5, tiles="CartoDB positron")
     st_folium(m, width="100%", height=500)
 
 st.markdown("---")
-st.caption("**Raster Viewer Pro v2.7** | Stable Release")
+st.caption("**Raster Viewer Pro v2.8** | Optimized Layout")
