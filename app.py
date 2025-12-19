@@ -12,9 +12,9 @@ import matplotlib.pyplot as plt
 import matplotlib.colors as mcolors
 
 # --- CẤU HÌNH TRANG ---
-st.set_page_config(layout="wide", page_title="Raster Viewer Pro 2.9")
+st.set_page_config(layout="wide", page_title="Raster Viewer Pro - Classic")
 
-# --- 1. HÀM XỬ LÝ SỐ LIỆU ---
+# --- 1. HÀM XỬ LÝ SỐ LIỆU (CACHE) ---
 @st.cache_data
 def load_and_reproject(file_path, target_epsg):
     try:
@@ -95,7 +95,7 @@ with st.sidebar:
 
 # --- 3. MAIN APP ---
 if uploaded_file:
-    # CSS TÙY CHỈNH
+    # --- CSS KHÔI PHỤC GIAO DIỆN ĐẸP ---
     st.markdown("""
         <style>
         .block-container {
@@ -103,43 +103,53 @@ if uploaded_file:
             padding-bottom: 1rem;
         }
         
-        /* --- TÙY CHỈNH LEGEND --- */
+        /* Font metric Min/Max/Mean - Giữ font nhỏ gọn */
+        div[data-testid="stMetricLabel"] { font-size: 14px !important; }
+        div[data-testid="stMetricValue"] { font-size: 18px !important; color: #0068c9 !important; }
+
+        /* --- 1. LEGEND: QUAY VỀ GÓC TRÁI DƯỚI (Vị trí đẹp nhất) --- */
         .leaflet-control-legend {
-            /* 1. THIẾT LẬP VỊ TRÍ (QUAN TRỌNG) */
-            position: absolute !important;   /* Tách khỏi vị trí mặc định */
-            bottom: 30px !important;         /* Cách đáy 30px */
-            left: 50% !important;            /* Đẩy sang trái 50% màn hình */
-            transform: translateX(-50%) !important; /* Dịch ngược lại 50% chiều rộng của chính nó để nằm CHÍNH GIỮA */
+            /* Vị trí tuyệt đối */
+            position: absolute !important;
+            bottom: 30px !important;
+            left: 20px !important;
             
-            /* Reset các thuộc tính mặc định làm lệch vị trí */
+            /* Reset các thuộc tính khác */
             top: auto !important;
             right: auto !important;
-            margin: 0 !important;
-
-            /* 2. GIAO DIỆN (Code cũ của bạn) */
-            background-color: #ffffff !important; 
-            border-radius: 20px !important;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.2) !important;
-            padding: 10px 20px !important; /* Chỉnh padding cho cân đối */
+            
+            /* Giao diện */
+            background-color: #ffffff !important; /* Trắng tuyệt đối */
+            border-radius: 8px !important;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2) !important;
+            padding: 15px 15px !important;
             border: 1px solid rgba(0,0,0,0.1) !important;
             
-            /* Đảm bảo legend không quá rộng khi ở giữa */
-            width: auto !important; 
-            white-space: nowrap !important;
+            /* Kích thước rộng rãi */
+            width: 320px !important;
+            max-width: 80vw !important;
         }
 
-        /* Font số liệu Monospace */
+        /* Chữ số thẳng hàng, font đẹp */
         .leaflet-control-legend text {
-            font-family: 'Consolas', 'Monaco', 'Courier New', monospace !important; 
+            font-family: 'Consolas', 'Monaco', monospace !important; 
             font-size: 11px !important;
-            font-weight: 700 !important;
-            fill: #000 !important;
+            font-weight: 600 !important;
+            fill: #444 !important; /* Màu xám đậm dịu mắt */
             font-variant-numeric: tabular-nums !important;
         }
         
         .leaflet-control-legend line {
-            stroke: #333 !important;
+            stroke: #555 !important;
             stroke-width: 1.2px !important;
+        }
+
+        /* --- 2. MINIMAP: ĐẨY LÊN ĐỂ KHÔNG BỊ CHE --- */
+        .leaflet-control-minimap {
+            margin-bottom: 40px !important; /* Đẩy lên cao khỏi mép dưới */
+            margin-right: 10px !important;
+            border: 2px solid #fff !important;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.3) !important;
         }
         </style>
     """, unsafe_allow_html=True)
@@ -209,6 +219,7 @@ if uploaded_file:
         m.fit_bounds(bounds)
         folium.LayerControl().add_to(m)
         
+        # Chiều cao map vừa phải
         st_folium(m, width="100%", height=550, returned_objects=[])
 
 else:
@@ -217,4 +228,4 @@ else:
     st_folium(m, width="100%", height=500)
 
 st.markdown("---")
-st.caption("**Raster Viewer Pro v2.9** | Font Tweaks & Pure White Legend")
+st.caption("**Raster Viewer Pro** | Classic Layout Restored")
