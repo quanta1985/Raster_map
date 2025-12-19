@@ -9,3 +9,4 @@ flask
 flask-cors
 xarray
 psutil
+numpy
