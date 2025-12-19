@@ -96,33 +96,36 @@ with st.sidebar:
 # --- 3. MAIN APP ---
 if uploaded_file:
     # CSS TÙY CHỈNH
-    st.markdown("""
+st.markdown("""
         <style>
         .block-container {
             padding-top: 3rem !important;
             padding-bottom: 1rem;
         }
         
-        /* --- 1. CHỈNH SIZE CHỮ MIN/MAX/MEAN --- */
-        /* Label (Chữ Min, Max...) */
-        div[data-testid="stMetricLabel"] {
-            font-size: 14px !important;
-            font-weight: 500 !important;
-        }
-        /* Value (Số liệu) - Giảm xuống 18px cho hài hòa */
-        div[data-testid="stMetricValue"] {
-            font-size: 18px !important; 
-            font-weight: 600 !important;
-            color: #0068c9 !important;
-        }
-
-        /* --- 2. LEGEND BACKGROUND TRẮNG --- */
+        /* --- TÙY CHỈNH LEGEND --- */
         .leaflet-control-legend {
-            background-color: #ffffff !important; /* TRẮNG TUYỆT ĐỐI */
+            /* 1. THIẾT LẬP VỊ TRÍ (QUAN TRỌNG) */
+            position: absolute !important;   /* Tách khỏi vị trí mặc định */
+            bottom: 30px !important;         /* Cách đáy 30px */
+            left: 50% !important;            /* Đẩy sang trái 50% màn hình */
+            transform: translateX(-50%) !important; /* Dịch ngược lại 50% chiều rộng của chính nó để nằm CHÍNH GIỮA */
+            
+            /* Reset các thuộc tính mặc định làm lệch vị trí */
+            top: auto !important;
+            right: auto !important;
+            margin: 0 !important;
+
+            /* 2. GIAO DIỆN (Code cũ của bạn) */
+            background-color: #ffffff !important; 
             border-radius: 20px !important;
             box-shadow: 0 4px 12px rgba(0,0,0,0.2) !important;
-            padding: 20px 15px !important;
+            padding: 10px 20px !important; /* Chỉnh padding cho cân đối */
             border: 1px solid rgba(0,0,0,0.1) !important;
+            
+            /* Đảm bảo legend không quá rộng khi ở giữa */
+            width: auto !important; 
+            white-space: nowrap !important;
         }
 
         /* Font số liệu Monospace */
