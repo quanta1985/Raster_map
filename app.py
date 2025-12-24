@@ -85,8 +85,8 @@ with st.sidebar:
             c_max = col_max.number_input("Max", value=100.0)
 
     with st.expander("🛠️ 3. Thông tin Bản đồ", expanded=True):
-        map_title_input = st.text_input("Tên bản đồ", value="Bản đồ lan truyền chất ô nhiễm trong môi trường nước")
-        map_subtitle_input = st.text_input("Mô tả (Subtitle)", value="Phân bố nồng độ BOD5 (mg/l)")
+        map_title_input = st.text_input("Tên bản đồ", value="Bản đồ lan truyền khói thải do phương tiện giao thông")
+        map_subtitle_input = st.text_input("Mô tả (Subtitle)", value="Phân bố nồng độ (mg/m3)")
         
         c3, c4 = st.columns(2)
         show_minimap = c3.checkbox("MiniMap", value=True)
